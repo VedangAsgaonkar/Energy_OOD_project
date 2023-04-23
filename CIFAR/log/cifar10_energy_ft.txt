@@ -1,0 +1,107 @@
+---Training with dataset: cifar10---model used:wrn---seed: 1---score used:energy---------
+----------------23-------5--------------------
+/usr/lib/python3/dist-packages/requests/__init__.py:89: RequestsDependencyWarning: urllib3 (1.26.9) or chardet (3.0.4) doesn't match a supported version!
+  warnings.warn("urllib3 ({}) or chardet ({}) doesn't match a supported "
+{'batch_size': 128, 'calibration': False, 'dataset': 'cifar10', 'decay': 0.0005, 'droprate': 0.3, 'epochs': 10, 'layers': 40, 'learning_rate': 0.001, 'load': './snapshots/pretrained', 'm_in': -23.0, 'm_out': -5.0, 'model': 'wrn', 'momentum': 0.9, 'ngpu': 1, 'oe_batch_size': 256, 'prefetch': 4, 'save': './snapshots/energy_ft', 'score': 'energy', 'seed': 1, 'test': False, 'test_bs': 200, 'widen_factor': 2}
+Model restored! Epoch: 99
+Beginning Training
+
+/home/vedang/.local/lib/python3.8/site-packages/torch/optim/lr_scheduler.py:138: UserWarning: Detected call of `lr_scheduler.step()` before `optimizer.step()`. In PyTorch 1.1.0 and later, you should call them in the opposite order: `optimizer.step()` before `lr_scheduler.step()`.  Failure to do this will result in PyTorch skipping the first value of the learning rate schedule. See more details at https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate
+  warnings.warn("Detected call of `lr_scheduler.step()` before `optimizer.step()`. "
+Epoch   1 | Time    16 | Train Loss 7.7711 | Test Loss 0.449 | Test Error 8.00
+Epoch   2 | Time    17 | Train Loss 4.7355 | Test Loss 0.387 | Test Error 6.60
+Epoch   3 | Time    13 | Train Loss 3.3737 | Test Loss 0.432 | Test Error 6.81
+Epoch   4 | Time    13 | Train Loss 3.4136 | Test Loss 0.478 | Test Error 7.52
+Epoch   5 | Time    13 | Train Loss 2.8332 | Test Loss 0.459 | Test Error 6.61
+Epoch   6 | Time    13 | Train Loss 2.4777 | Test Loss 0.425 | Test Error 6.85
+Epoch   7 | Time    13 | Train Loss 2.4227 | Test Loss 0.436 | Test Error 6.40
+Epoch   8 | Time    13 | Train Loss 2.3067 | Test Loss 0.422 | Test Error 6.76
+Epoch   9 | Time    13 | Train Loss 2.1298 | Test Loss 0.404 | Test Error 6.48
+Epoch  10 | Time    13 | Train Loss 2.1006 | Test Loss 0.416 | Test Error 6.61
+/usr/lib/python3/dist-packages/requests/__init__.py:89: RequestsDependencyWarning: urllib3 (1.26.9) or chardet (3.0.4) doesn't match a supported version!
+  warnings.warn("urllib3 ({}) or chardet ({}) doesn't match a supported "
+Namespace(T=1.0, droprate=0.3, layers=40, load='./snapshots', method_name='cifar10_wrn_s1_energy_ft', ngpu=1, noise=0, num_to_avg=10, out_as_pos=False, prefetch=2, score='energy', test_bs=200, use_xent=False, validate=False, widen_factor=2)
+Files already downloaded and verified
+Model restored! Epoch: 9
+Error Rate 6.61
+
+Using CIFAR-10 as typical data
+
+
+Error Detection
+                        cifar10_wrn_s1_energy_ft
+FPR95:                  32.16
+AUROC:                  91.47
+AUPR:                   44.01
+
+
+Texture Detection
+[-24.225365 -28.182156 -16.583485] [-3.5456595 -2.7520258 -2.6826077]
+                                cifar10_wrn_s1_energy_ft
+  FPR95 AUROC AUPR
+& 0.34 & 99.81 & 99.96
+& 0.07 & 0.01 & 0.00
+Files already downloaded and verified
+
+
+Arithmetic Mean of Random Image Pair Detection
+[-24.225365 -28.182156 -16.583485] [-6.36516  -3.92493  -9.288749]
+                                cifar10_wrn_s1_energy_ft
+  FPR95 AUROC AUPR
+& 36.25 & 92.55 & 98.20
+& 1.20 & 0.26 & 0.09
+
+
+Geometric Mean of Random Image Pair Detection
+[-24.225365 -28.182156 -16.583485] [-14.982921 -12.727614 -14.479208]
+                                cifar10_wrn_s1_energy_ft
+  FPR95 AUROC AUPR
+& 77.75 & 73.41 & 91.85
+& 0.76 & 0.47 & 0.21
+
+
+Jigsawed Images Detection
+[-24.225365 -28.182156 -16.583485] [-19.021807  -5.124283  -5.188278]
+                                cifar10_wrn_s1_energy_ft
+  FPR95 AUROC AUPR
+& 27.64 & 95.42 & 99.06
+& 0.37 & 0.12 & 0.04
+
+
+Speckle Noised Images Detection
+[-24.225365 -28.182156 -16.583485] [-2.9486089 -2.8926215 -2.7902877]
+                                cifar10_wrn_s1_energy_ft
+  FPR95 AUROC AUPR
+& 0.24 & 99.93 & 99.97
+& 0.10 & 0.02 & 0.02
+
+
+Pixelate Detection
+[-24.225365 -28.182156 -16.583485] [-3.2409406 -3.1091595 -7.598761 ]
+                                cifar10_wrn_s1_energy_ft
+  FPR95 AUROC AUPR
+& 0.22 & 99.79 & 99.96
+& 0.10 & 0.01 & 0.00
+
+
+RGB Ghosted/Shifted Image Detection
+[-24.225365 -28.182156 -16.583485] [-13.666103  -12.61597    -3.7934673]
+                                cifar10_wrn_s1_energy_ft
+  FPR95 AUROC AUPR
+& 53.04 & 81.06 & 93.67
+& 0.65 & 0.64 & 0.30
+
+
+Inverted Image Detection
+[-24.225365 -28.182156 -16.583485] [ -5.8049674  -3.376385  -14.981665 ]
+                                cifar10_wrn_s1_energy_ft
+  FPR95 AUROC AUPR
+& 36.77 & 90.93 & 97.57
+& 0.95 & 0.37 & 0.13
+
+
+Mean Validation Results
+                                cifar10_wrn_s1_energy_ft
+  FPR95 AUROC AUPR
+& 33.13 & 90.44 & 97.18
+||||||||done with training above energy_ft|||||||||||||||||||

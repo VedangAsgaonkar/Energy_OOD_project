@@ -1,0 +1,84 @@
+Namespace(T=1.0, droprate=0.3, layers=40, load='./snapshots', method_name='cifar10_wrn_s1_energy_ft', ngpu=1, noise=0, num_to_avg=10, out_as_pos=False, prefetch=2, score='energy', test_bs=200, use_xent=False, validate=False, widen_factor=2)
+Files already downloaded and verified
+Model restored! Epoch: 9
+Error Rate 4.78
+
+Using CIFAR-10 as typical data
+
+
+Error Detection
+			cifar10_wrn_s1_energy_ft
+FPR95:			19.34
+AUROC:			94.13
+AUPR:			43.29
+
+
+Texture Detection
+[-27.51113  -30.316227 -25.52839 ] [-3.2136838 -4.096335  -4.366049 ]
+				cifar10_wrn_s1_energy_ft
+  FPR95 AUROC AUPR
+& 5.24 & 98.59 & 99.67
+& 0.25 & 0.07 & 0.03
+Files already downloaded and verified
+
+
+Arithmetic Mean of Random Image Pair Detection
+[-27.51113  -30.316227 -25.52839 ] [ -5.831931  -18.86284    -4.9793315]
+				cifar10_wrn_s1_energy_ft
+  FPR95 AUROC AUPR
+& 19.76 & 96.08 & 99.10
+& 0.86 & 0.08 & 0.03
+
+
+Geometric Mean of Random Image Pair Detection
+[-27.51113  -30.316227 -25.52839 ] [-28.1571   -22.277822  -8.132378]
+				cifar10_wrn_s1_energy_ft
+  FPR95 AUROC AUPR
+& 73.54 & 76.57 & 93.00
+& 0.92 & 0.58 & 0.25
+
+
+Jigsawed Images Detection
+[-27.51113  -30.316227 -25.52839 ] [ -8.893743 -17.189222  -4.209195]
+				cifar10_wrn_s1_energy_ft
+  FPR95 AUROC AUPR
+& 16.26 & 96.70 & 99.26
+& 0.51 & 0.09 & 0.04
+
+
+Speckle Noised Images Detection
+[-27.51113  -30.316227 -25.52839 ] [-6.279633  -6.7902327 -6.3198385]
+				cifar10_wrn_s1_energy_ft
+  FPR95 AUROC AUPR
+& 0.05 & 99.13 & 99.85
+& 0.04 & 0.01 & 0.00
+
+
+Pixelate Detection
+[-27.51113  -30.316227 -25.52839 ] [-6.4891806 -7.838332  -7.444507 ]
+				cifar10_wrn_s1_energy_ft
+  FPR95 AUROC AUPR
+& 0.00 & 99.38 & 99.89
+& 0.00 & 0.01 & 0.00
+
+
+RGB Ghosted/Shifted Image Detection
+[-27.51113  -30.316227 -25.52839 ] [ -6.33976    -4.9378924 -21.853025 ]
+				cifar10_wrn_s1_energy_ft
+  FPR95 AUROC AUPR
+& 19.56 & 95.64 & 98.90
+& 1.25 & 0.26 & 0.10
+
+
+Inverted Image Detection
+[-27.51113  -30.316227 -25.52839 ] [ -4.8178086 -10.197405   -5.1734514]
+				cifar10_wrn_s1_energy_ft
+  FPR95 AUROC AUPR
+& 4.67 & 98.76 & 99.74
+& 0.46 & 0.07 & 0.02
+
+
+Mean Validation Results
+				cifar10_wrn_s1_energy_ft
+  FPR95 AUROC AUPR
+& 19.12 & 94.61 & 98.53

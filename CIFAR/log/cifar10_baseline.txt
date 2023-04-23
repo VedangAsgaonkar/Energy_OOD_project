@@ -1,0 +1,84 @@
+Namespace(T=1.0, droprate=0.3, layers=40, load='./snapshots', method_name='cifar10_wrn_pretrained', ngpu=1, noise=0, num_to_avg=10, out_as_pos=False, prefetch=2, score='energy', test_bs=200, use_xent=False, validate=False, widen_factor=2)
+Files already downloaded and verified
+Model restored! Epoch: 99
+Error Rate 5.16
+
+Using CIFAR-10 as typical data
+
+
+Error Detection
+			cifar10_wrn_pretrained
+FPR95:			25.17
+AUROC:			93.36
+AUPR:			45.73
+
+
+Texture Detection
+[-14.407909 -16.048988 -12.20411 ] [-7.323727  -5.3024526 -3.3052282]
+				cifar10_wrn_pretrained
+  FPR95 AUROC AUPR
+& 52.52 & 85.27 & 95.38
+& 0.64 & 0.34 & 0.17
+Files already downloaded and verified
+
+
+Arithmetic Mean of Random Image Pair Detection
+[-14.407909 -16.048988 -12.20411 ] [-6.7019014 -7.592398  -8.0572815]
+				cifar10_wrn_pretrained
+  FPR95 AUROC AUPR
+& 49.65 & 87.78 & 96.76
+& 1.38 & 0.52 & 0.23
+
+
+Geometric Mean of Random Image Pair Detection
+[-14.407909 -16.048988 -12.20411 ] [ -9.857986 -12.157627 -11.439095]
+				cifar10_wrn_pretrained
+  FPR95 AUROC AUPR
+& 71.84 & 74.40 & 92.05
+& 0.79 & 0.50 & 0.22
+
+
+Jigsawed Images Detection
+[-14.407909 -16.048988 -12.20411 ] [-5.4667044 -6.21462   -8.255206 ]
+				cifar10_wrn_pretrained
+  FPR95 AUROC AUPR
+& 54.66 & 84.63 & 95.56
+& 0.97 & 0.42 & 0.20
+
+
+Speckle Noised Images Detection
+[-14.407909 -16.048988 -12.20411 ] [ -7.6703887 -10.288126   -6.971816 ]
+				cifar10_wrn_pretrained
+  FPR95 AUROC AUPR
+& 66.06 & 89.37 & 97.76
+& 1.03 & 0.15 & 0.05
+
+
+Pixelate Detection
+[-14.407909 -16.048988 -12.20411 ] [-6.259612 -9.729204 -9.710344]
+				cifar10_wrn_pretrained
+  FPR95 AUROC AUPR
+& 77.37 & 84.34 & 96.71
+& 0.78 & 0.20 & 0.05
+
+
+RGB Ghosted/Shifted Image Detection
+[-14.407909 -16.048988 -12.20411 ] [-11.939563  -6.148167  -7.146743]
+				cifar10_wrn_pretrained
+  FPR95 AUROC AUPR
+& 52.52 & 82.76 & 94.83
+& 1.14 & 0.44 & 0.12
+
+
+Inverted Image Detection
+[-14.407909 -16.048988 -12.20411 ] [-5.9709005 -4.1170244 -6.960583 ]
+				cifar10_wrn_pretrained
+  FPR95 AUROC AUPR
+& 38.92 & 91.65 & 98.01
+& 0.89 & 0.21 & 0.07
+
+
+Mean Validation Results
+				cifar10_wrn_pretrained
+  FPR95 AUROC AUPR
+& 58.72 & 84.99 & 95.95

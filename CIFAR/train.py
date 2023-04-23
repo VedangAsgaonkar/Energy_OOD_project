@@ -94,9 +94,12 @@ if args.calibration:
     calib_indicator = '_calib'
 
 
-ood_data = TinyImages(transform=trn.Compose(
-    [trn.ToTensor(), trn.ToPILImage(), trn.RandomCrop(32, padding=4),
-     trn.RandomHorizontalFlip(), trn.ToTensor(), trn.Normalize(mean, std)]))
+# ood_data = TinyImages(transform=trn.Compose(
+#     [trn.ToTensor(), trn.ToPILImage(), trn.RandomCrop(32, padding=4),
+#      trn.RandomHorizontalFlip(), trn.ToTensor(), trn.Normalize(mean, std)]))
+ood_data = dset.ImageFolder(root="../data/dtd/images",
+                            transform=trn.Compose([trn.Resize(32), trn.CenterCrop(32), trn.RandomHorizontalFlip(),
+                                                   trn.ToTensor(), trn.Normalize(mean, std)]))
 
 train_loader_in = torch.utils.data.DataLoader(
     train_data_in,
