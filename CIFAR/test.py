@@ -80,6 +80,8 @@ if args.load != '':
             subdir = 'oe_tune'
         elif 'energy_ft' in args.method_name:
             subdir = 'energy_ft'
+        elif 'ranking' in args.method_name:
+            subdir = 'ranking'
         else:
             subdir = 'oe_scratch'
         

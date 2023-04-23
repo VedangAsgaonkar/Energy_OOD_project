@@ -51,6 +51,7 @@ parser.add_argument('--prefetch', type=int, default=4, help='Pre-fetching thread
 # EG specific
 parser.add_argument('--m_in', type=float, default=-25., help='margin for in-distribution; above this value will be penalized')
 parser.add_argument('--m_out', type=float, default=-7., help='margin for out-distribution; below this value will be penalized')
+parser.add_argument('--margin',  type=float, default=20., help='margin for ranking loss')
 parser.add_argument('--score', type=str, default='OE', help='OE|energy')
 parser.add_argument('--seed', type=int, default=1, help='seed for np(tinyimages80M sampling); 1|2|8|100|107')
 args = parser.parse_args()
@@ -60,6 +61,8 @@ if args.score == 'OE':
     save_info = 'oe_tune'
 elif args.score == 'energy':
     save_info = 'energy_ft'
+elif args.score == 'ranking':
+    save_info = 'ranking'
 
 args.save = args.save+save_info
 if os.path.isdir(args.save) == False:
@@ -199,6 +202,10 @@ def train():
             loss += 0.1*(torch.pow(F.relu(Ec_in-args.m_in), 2).mean() + torch.pow(F.relu(args.m_out-Ec_out), 2).mean())
         elif args.score == 'OE':
             loss += 0.5 * -(x[len(in_set[0]):].mean(1) - torch.logsumexp(x[len(in_set[0]):], dim=1)).mean()
+        elif args.score == 'ranking':
+            Ec_out = -torch.logsumexp(x[len(in_set[0]):], dim=1)
+            Ec_in = -torch.logsumexp(x[:len(in_set[0])], dim=1)
+            loss += 0.1*torch.mean(torch.pow(args.margin-Ec_out[:,None]+Ec_in[None,:], 2))
 
         loss.backward()
         optimizer.step()
@@ -262,7 +269,6 @@ for epoch in range(0, args.epochs):
     torch.save(net.state_dict(),
                os.path.join(args.save, args.dataset + calib_indicator + '_' + args.model + '_s' + str(args.seed) +
                             '_' + save_info + '_epoch_' + str(epoch) + '.pt'))
-    
                # Let us not waste space and delete the previous model
     prev_path = os.path.join(args.save, args.dataset + calib_indicator + '_' + args.model + '_s' + str(args.seed) +
                              '_' + save_info + '_epoch_'+ str(epoch - 1) + '.pt')

@@ -56,7 +56,7 @@ elif [ "$1" = "oe_tune" ] || [ "$1" = "energy_ft" ]; then # fine-tuning
 		m_in=-27
 	    fi
 	            echo "---------------"$m_in"------"$m_out"--------------------"
-	            CUDA_VISIBLE_DEVICES=$gpu python3 train.py $data --model $model --score $score --seed $seed --m_in $m_in --m_out $m_out
+	            CUDA_VISIBLE_DEVICES=$gpu python3 train.py $data --model $model --score ranking --seed $seed --m_in $m_in --m_out $m_out
 	            CUDA_VISIBLE_DEVICES=$gpu python3 test.py --method_name ${dm}_s${seed}_$1 --num_to_avg 10 --score $score
         done
     done
