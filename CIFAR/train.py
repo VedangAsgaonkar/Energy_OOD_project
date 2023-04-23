@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# CUDA_VISIBLE_DEVICES=0 python3 train.py cifar10 --model wrn --score ranking --seed 1 --m_in -23 --m_out -5
 import numpy as np
 import os
 import pickle

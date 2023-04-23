@@ -1,3 +1,4 @@
+# CUDA_VISIBLE_DEVICES=0 python3 test.py --method_name cifar10_wrn_s1_ranking --num_to_avg 10 --score energy
 import numpy as np
 import sys
 import os
