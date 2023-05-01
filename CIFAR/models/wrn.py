@@ -2,6 +2,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from collections import OrderedDict
 
 
 class BasicBlock(nn.Module):
@@ -114,4 +115,31 @@ class WideResNet(nn.Module):
         out = F.avg_pool2d(out, 8)
         out = out.view(-1, self.nChannels)
         return self.fc(out), out_list
+
+class Model_20(nn.Module):
+
+    def __init__(self, vocab_size, dim, embeddings):
+        super(Model_20, self).__init__()
+        self.vocab_size = vocab_size 
+        self.dim = dim
+        self.embedding = nn.Embedding(self.vocab_size, self.dim)
+        self.net = nn.Sequential(OrderedDict([
+            #('embed1', nn.Embedding(self.vocab_size, self.dim)),
+            ('lstm', nn.LSTM(input_size=300, hidden_size=128, num_layers=2, dropout=0.3, batch_first=True)),
+        ]))
+    
+        self.embedding.weight = nn.Parameter(torch.FloatTensor(embeddings))
+        #copy_((embeddings))
+        self.embedding.weight.requires_grad = False
+    
+        self.fc = nn.Linear(128, 10) # the first 10 are ID classes, the latter 10 are OOD
+
+    def forward(self, img):
+        
+        output = self.embedding(img)
+        output, _ = self.net(output)
+        output = self.fc(output)
+        final_out = torch.sigmoid( output[0][-1] )
+        
+        return final_out
          
