@@ -7,12 +7,17 @@ import argparse
 import time
 import torch
 import torch.nn as nn
+import torch.optim as optim
+from collections import OrderedDict
 import torch.backends.cudnn as cudnn
 import torchvision.transforms as trn
 import torchvision.datasets as dset
 import torch.nn.functional as F
 from tqdm import tqdm
-from models.wrn import WideResNet
+from models.wrn import WideResNet, Model_20
+from sklearn.datasets import fetch_20newsgroups
+from keras.preprocessing.text import Tokenizer
+from keras.utils import pad_sequences
 
 if __package__ is None:
     import sys
@@ -24,8 +29,8 @@ if __package__ is None:
 
 parser = argparse.ArgumentParser(description='Tunes a CIFAR Classifier with OE',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('dataset', type=str, choices=['cifar10', 'cifar100'],
-                    help='Choose between CIFAR-10, CIFAR-100.')
+parser.add_argument('--dataset', type=str, choices=['cifar10', 'cifar100', '20news'],
+                    help='Choose between CIFAR-10, CIFAR-100 and 20news.')
 parser.add_argument('--model', '-m', type=str, default='allconv',
                     choices=['allconv', 'wrn', 'densenet'], help='Choose architecture.')
 parser.add_argument('--calibration', '-c', action='store_true',
@@ -53,7 +58,7 @@ parser.add_argument('--prefetch', type=int, default=4, help='Pre-fetching thread
 parser.add_argument('--m_in', type=float, default=-25., help='margin for in-distribution; above this value will be penalized')
 parser.add_argument('--m_out', type=float, default=-7., help='margin for out-distribution; below this value will be penalized')
 parser.add_argument('--margin',  type=float, default=20., help='margin for ranking loss')
-parser.add_argument('--score', type=str, default='OE', help='OE|energy')
+parser.add_argument('--score', type=str, default='OE', help='OE|energy|ranking')
 parser.add_argument('--seed', type=int, default=1, help='seed for np(tinyimages80M sampling); 1|2|8|100|107')
 args = parser.parse_args()
 
@@ -86,10 +91,72 @@ if args.dataset == 'cifar10':
     train_data_in = dset.CIFAR10('../data/cifarpy', train=True, transform=train_transform)
     test_data = dset.CIFAR10('../data/cifarpy', train=False, transform=test_transform)
     num_classes = 10
-else:
+    ood_data = dset.ImageFolder(root="../data/dtd/images",
+                            transform=trn.Compose([trn.Resize(32), trn.CenterCrop(32), trn.RandomHorizontalFlip(),
+                                                   trn.ToTensor(), trn.Normalize(mean, std)]))
+elif args.dataset == 'cifar100':
     train_data_in = dset.CIFAR100('../data/cifarpy', train=True, transform=train_transform)
     test_data = dset.CIFAR100('../data/cifarpy', train=False, transform=test_transform)
     num_classes = 100
+    ood_data = dset.ImageFolder(root="../data/dtd/images",
+                            transform=trn.Compose([trn.Resize(32), trn.CenterCrop(32), trn.RandomHorizontalFlip(),
+                                                   trn.ToTensor(), trn.Normalize(mean, std)]))
+else :
+    categories = ['alt.atheism',
+                'comp.graphics',
+                'comp.os.ms-windows.misc',
+                'comp.sys.ibm.pc.hardware',
+                'comp.sys.mac.hardware',
+                'comp.windows.x',
+                'misc.forsale',
+                'rec.autos',
+                'rec.motorcycles',
+                'rec.sport.baseball',
+                'rec.sport.hockey',
+                'sci.crypt',
+                'sci.electronics',
+                'sci.med',
+                'sci.space',
+                'soc.religion.christian',
+                'talk.politics.guns',
+                'talk.politics.mideast',
+                'talk.politics.misc',
+                'talk.religion.misc']
+    newsgroups_train = fetch_20newsgroups(subset='train', shuffle=True, categories=categories[:10])
+    newsgroups_test = fetch_20newsgroups(subset='test', shuffle=True, categories=categories[:10])
+    newsgroups_ood = fetch_20newsgroups(subset='train', shuffle=True, categories=categories[10:])
+
+    MAX_SEQUENCE_LENGTH = 500
+    MAX_NB_WORDS = 20000
+    tokenizer = Tokenizer(num_words=MAX_NB_WORDS)
+    # Preprocessing on train set......
+    labels_train = newsgroups_train.target
+    texts1 = newsgroups_train.data
+
+    # tokenizer.fit_on_texts(texts)
+
+    sequences = tokenizer.texts_to_sequences(texts1)
+    train_data_in = pad_sequences(sequences, maxlen=MAX_SEQUENCE_LENGTH)
+    
+    # Preprocessing on test set
+    labels_test = newsgroups_test.target
+    texts2 = newsgroups_test.data
+
+    # tokenizer.fit_on_texts(texts)
+    sequences = tokenizer.texts_to_sequences(texts2)
+    test_data = pad_sequences(sequences, maxlen=MAX_SEQUENCE_LENGTH)
+
+    # Preprocessing on OOD data
+    labels_ood = newsgroups_ood.target
+    texts3 = newsgroups_ood.data
+
+    # tokenizer.fit_on_texts(texts)
+    sequences = tokenizer.texts_to_sequences(texts3)
+    ood_data = pad_sequences(sequences, maxlen=MAX_SEQUENCE_LENGTH)
+
+    texts1.extend(texts3)
+    tokenizer.fit_on_texts(texts1)
+    word_index = tokenizer.word_index
 
 
 calib_indicator = ''
@@ -101,27 +168,56 @@ if args.calibration:
 # ood_data = TinyImages(transform=trn.Compose(
 #     [trn.ToTensor(), trn.ToPILImage(), trn.RandomCrop(32, padding=4),
 #      trn.RandomHorizontalFlip(), trn.ToTensor(), trn.Normalize(mean, std)]))
-ood_data = dset.ImageFolder(root="../data/dtd/images",
-                            transform=trn.Compose([trn.Resize(32), trn.CenterCrop(32), trn.RandomHorizontalFlip(),
-                                                   trn.ToTensor(), trn.Normalize(mean, std)]))
 
-train_loader_in = torch.utils.data.DataLoader(
-    train_data_in,
-    batch_size=args.batch_size, shuffle=True,
-    num_workers=args.prefetch, pin_memory=True)
 
-train_loader_out = torch.utils.data.DataLoader(
-    ood_data,
-    batch_size=args.oe_batch_size, shuffle=False,
-    num_workers=args.prefetch, pin_memory=True)
+if args.dataset != '20news' :
+    train_loader_in = torch.utils.data.DataLoader(
+        train_data_in,
+        batch_size=args.batch_size, shuffle=True,
+        num_workers=args.prefetch, pin_memory=True)
 
-test_loader = torch.utils.data.DataLoader(
-    test_data,
-    batch_size=args.batch_size, shuffle=False,
-    num_workers=args.prefetch, pin_memory=True)
+    train_loader_out = torch.utils.data.DataLoader(
+        ood_data,
+        batch_size=args.oe_batch_size, shuffle=False,
+        num_workers=args.prefetch, pin_memory=True)
+
+    test_loader = torch.utils.data.DataLoader(
+        test_data,
+        batch_size=args.batch_size, shuffle=False,
+        num_workers=args.prefetch, pin_memory=True)
 
 # Create model
-net = WideResNet(args.layers, num_classes, args.widen_factor, dropRate=args.droprate)
+if args.dataset == '20news' :
+    embeddings_index = {}
+
+    path = 'glove.6B/'
+
+    f = open(path+'glove.6B.300d.txt')
+    for line in f:
+        values = line.split(' ')
+        word = values[0]
+        #values[-1] = values[-1].replace('\n', '')
+        coefs = np.asarray(values[1:], dtype='float32')
+        embeddings_index[word] = coefs
+        #print (values[1:])
+    f.close()
+
+    EMBEDDING_DIM = 300
+
+    embedding_matrix = np.random.random((len(word_index) + 1, EMBEDDING_DIM))
+    print(f'after defining : {embedding_matrix.shape}')
+
+    for word, i in word_index.items():
+        embedding_vector = embeddings_index.get(word)
+        #embedding_vector = embeddings_index[word]
+        if embedding_vector is not None:
+        # words not found in embedding index will be all-zeros.
+            embedding_matrix[i] = embedding_vector
+
+    net = Model_20(embedding_matrix.shape[0], EMBEDDING_DIM, embedding_matrix)
+    # print(f'Net params : ({embedding_matrix.shape[0], EMBEDDING_DIM, embedding_matrix})')
+else :
+    net = WideResNet(args.layers, num_classes, args.widen_factor, dropRate=args.droprate)
 
 def recursion_change_bn(module):
     if isinstance(module, torch.nn.BatchNorm2d):
@@ -133,7 +229,7 @@ def recursion_change_bn(module):
     return module
 # Restore model
 model_found = False
-if args.load != '':
+if args.load != 'nill':
     for i in range(1000 - 1, -1, -1):
         
         model_name = os.path.join(args.load, args.dataset + calib_indicator + '_' + args.model +
@@ -155,9 +251,20 @@ if args.ngpu > 0:
 
 cudnn.benchmark = True  # fire on all cylinders
 
-optimizer = torch.optim.SGD(
-    net.parameters(), state['learning_rate'], momentum=state['momentum'],
-    weight_decay=state['decay'], nesterov=True)
+if args.dataset == '20news' :
+    optimizer = optim.Adam(filter(lambda p: p.requires_grad, net.parameters()), lr=0.001)
+else :
+    optimizer = torch.optim.SGD(
+        net.parameters(), state['learning_rate'], momentum=state['momentum'],
+        weight_decay=state['decay'], nesterov=True)
+
+    scheduler = torch.optim.lr_scheduler.LambdaLR(
+        optimizer,
+        lr_lambda=lambda step: cosine_annealing(
+            step,
+            args.epochs * len(train_loader_in),
+            1,  # since lr_lambda computes multiplicative factor
+            1e-6 / args.learning_rate))
 
 
 def cosine_annealing(step, total_steps, lr_max, lr_min):
@@ -165,55 +272,85 @@ def cosine_annealing(step, total_steps, lr_max, lr_min):
             1 + np.cos(step / total_steps * np.pi))
 
 
-scheduler = torch.optim.lr_scheduler.LambdaLR(
-    optimizer,
-    lr_lambda=lambda step: cosine_annealing(
-        step,
-        args.epochs * len(train_loader_in),
-        1,  # since lr_lambda computes multiplicative factor
-        1e-6 / args.learning_rate))
-
 
 # /////////////// Training ///////////////
 
-def train():
-    net.train()  # enter train mode
-    loss_avg = 0.0
+if args.dataset == '20news' :
+    def train() :
+        net.train()
+        loss_avg = 0.0
+        print(f'Starting loop....')
 
-    # start at a random point of the outlier dataset; this induces more randomness without obliterating locality
-    train_loader_out.dataset.offset = np.random.randint(len(train_loader_out.dataset))
-    for in_set, out_set in zip(train_loader_in, train_loader_out):
-        data = torch.cat((in_set[0], out_set[0]), 0)
-        target = in_set[1]
+        for in_set_tr, in_set_label, out_set_tr, out_set_label in zip(train_data_in, labels_train, ood_data, labels_ood) :
+            data = np.concatenate((in_set_tr, out_set_tr), 0)
+            target = np.zeros(10)
+            target[int(in_set_label)] = 1
+            # print(f'Initial target : {target}')
+            # print(f'data and target taken.....')
+            if torch.cuda.is_available() : data, target = data.cuda(), target.cuda()
+            x = net(torch.LongTensor(data.reshape(1, -1)))
 
-        data, target = data.cuda(), target.cuda()
+            optimizer.zero_grad()
+            # print(f'Before cross entropy : ({x[:len(in_set_tr)].shape, torch.FloatTensor(target).shape})')
+            loss = F.cross_entropy(x[:len(in_set_tr)], torch.FloatTensor(target))
+            # cross-entropy from softmax distribution to uniform distribution
+            if args.score == 'energy':
+                Ec_out = -torch.logsumexp(x[len(in_set_tr):], dim=0)
+                Ec_in = -torch.logsumexp(x[:len(in_set_tr)], dim=0)
+                loss += 0.1*(torch.pow(F.relu(Ec_in-args.m_in), 2).mean() + torch.pow(F.relu(args.m_out-Ec_out), 2).mean())
+            elif args.score == 'OE':
+                loss += 0.5 * -(x[len(in_set_tr):].mean() - torch.logsumexp(x[len(in_set_tr):], dim=0)).mean()
+            elif args.score == 'ranking':
+                Ec_out = -torch.logsumexp(x[len(in_set_tr):], dim=0)
+                Ec_in = -torch.logsumexp(x[:len(in_set_tr)], dim=0)
+                loss += 0.1*torch.mean(torch.pow(args.margin-Ec_out[:,None]+Ec_in[None,:], 2))
 
-        # forward
-        x = net(data)
+            loss.backward()
+            optimizer.step()
 
-        # backward
-        scheduler.step()
-        optimizer.zero_grad()
+            print(f'loss_avg = {loss_avg}')
+            loss_avg = loss_avg * 0.8 + float(loss) * 0.2
+        state['train_loss'] = loss_avg
+            
+else :
+    def train():
+        net.train()  # enter train mode
+        loss_avg = 0.0
 
-        loss = F.cross_entropy(x[:len(in_set[0])], target)
-        # cross-entropy from softmax distribution to uniform distribution
-        if args.score == 'energy':
-            Ec_out = -torch.logsumexp(x[len(in_set[0]):], dim=1)
-            Ec_in = -torch.logsumexp(x[:len(in_set[0])], dim=1)
-            loss += 0.1*(torch.pow(F.relu(Ec_in-args.m_in), 2).mean() + torch.pow(F.relu(args.m_out-Ec_out), 2).mean())
-        elif args.score == 'OE':
-            loss += 0.5 * -(x[len(in_set[0]):].mean(1) - torch.logsumexp(x[len(in_set[0]):], dim=1)).mean()
-        elif args.score == 'ranking':
-            Ec_out = -torch.logsumexp(x[len(in_set[0]):], dim=1)
-            Ec_in = -torch.logsumexp(x[:len(in_set[0])], dim=1)
-            loss += 0.1*torch.mean(torch.pow(args.margin-Ec_out[:,None]+Ec_in[None,:], 2))
+        # start at a random point of the outlier dataset; this induces more randomness without obliterating locality
+        train_loader_out.dataset.offset = np.random.randint(len(train_loader_out.dataset))
+        for in_set, out_set in zip(train_loader_in, train_loader_out):
+            data = torch.cat((in_set[0], out_set[0]), 0)
+            target = in_set[1]
 
-        loss.backward()
-        optimizer.step()
+            if cuda.is_available() : data, target = data.cuda(), target.cuda()
 
-        # exponential moving average
-        loss_avg = loss_avg * 0.8 + float(loss) * 0.2
-    state['train_loss'] = loss_avg
+            # forward
+            x = net(data)
+
+            # backward
+            scheduler.step()
+            optimizer.zero_grad()
+
+            loss = F.cross_entropy(x[:len(in_set[0])], target)
+            # cross-entropy from softmax distribution to uniform distribution
+            if args.score == 'energy':
+                Ec_out = -torch.logsumexp(x[len(in_set[0]):], dim=1)
+                Ec_in = -torch.logsumexp(x[:len(in_set[0])], dim=1)
+                loss += 0.1*(torch.pow(F.relu(Ec_in-args.m_in), 2).mean() + torch.pow(F.relu(args.m_out-Ec_out), 2).mean())
+            elif args.score == 'OE':
+                loss += 0.5 * -(x[len(in_set[0]):].mean(1) - torch.logsumexp(x[len(in_set[0]):], dim=1)).mean()
+            elif args.score == 'ranking':
+                Ec_out = -torch.logsumexp(x[len(in_set[0]):], dim=1)
+                Ec_in = -torch.logsumexp(x[:len(in_set[0])], dim=1)
+                loss += 0.1*torch.mean(torch.pow(args.margin-Ec_out[:,None]+Ec_in[None,:], 2))
+
+            loss.backward()
+            optimizer.step()
+
+            # exponential moving average
+            loss_avg = loss_avg * 0.8 + float(loss) * 0.2
+        state['train_loss'] = loss_avg
 
 
 # test function
@@ -222,19 +359,34 @@ def test():
     loss_avg = 0.0
     correct = 0
     with torch.no_grad():
-        for data, target in test_loader:
-            data, target = data.cuda(), target.cuda()
+        if args.dataset == '20news' :
+            for data, label in zip(test_data, labels_test) :
+                if torch.cuda.is_available() : data, target = data.cuda(), target.cuda()
 
-            # forward
-            output = net(data)
-            loss = F.cross_entropy(output, target)
+                target = np.zeros(10)
+                target[int(label)] = 1
 
-            # accuracy
-            pred = output.data.max(1)[1]
-            correct += pred.eq(target.data).sum().item()
+                output = net(torch.LongTensor(data.reshape(1, -1)))
+                loss = F.cross_entropy(x[:len(in_set_tr)], torch.FloatTensor(target))
 
-            # test loss average
-            loss_avg += float(loss.data)
+                pred = np.array(output.detach()).argmax()
+                correct += int(pred == label)
+
+                loss_avg += float(loss.data)
+        else :
+            for data, target in test_loader:
+                if torch.cuda.is_available() : data, target = data.cuda(), target.cuda()
+
+                # forward
+                output = net(data)
+                loss = F.cross_entropy(output, target)
+
+                # accuracy
+                pred = output.data.max(1)[1]
+                correct += pred.eq(target.data).sum().item()
+
+                # test loss average
+                loss_avg += float(loss.data)
 
     state['test_loss'] = loss_avg / len(test_loader)
     state['test_accuracy'] = correct / len(test_loader.dataset)
