@@ -125,21 +125,27 @@ class Model_20(nn.Module):
         self.embedding = nn.Embedding(self.vocab_size, self.dim)
         self.net = nn.Sequential(OrderedDict([
             #('embed1', nn.Embedding(self.vocab_size, self.dim)),
-            ('lstm', nn.LSTM(input_size=300, hidden_size=128, num_layers=2, dropout=0.3, batch_first=True)),
+            ('lstm', nn.LSTM(input_size=300, hidden_size=128, num_layers=2, bidirectional=True, dropout=0, batch_first=True)),
         ]))
     
         self.embedding.weight = nn.Parameter(torch.FloatTensor(embeddings))
         #copy_((embeddings))
         self.embedding.weight.requires_grad = False
     
-        self.fc = nn.Linear(128, 10) # the first 10 are ID classes, the latter 10 are OOD
+        self.fc = nn.Linear(256, 10) # the first 10 are ID classes, the latter 10 are OOD
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, img):
         
         output = self.embedding(img)
-        output, _ = self.net(output)
-        output = self.fc(output)
-        final_out = torch.sigmoid( output[0][-1] )
-        
-        return final_out
+        packed_embedded = nn.utils.rnn.pack_padded_sequence(output, torch.Tensor([300]) , batch_first=True)
+        packed_output,(hidden_state,cell_state) = self.net(packed_embedded)
+        hidden = torch.cat((hidden_state[-2,:,:], hidden_state[-1,:,:]), dim = 1)
+        dense_outputs=self.fc(hidden)
+        outputs=self.sigmoid(dense_outputs)
+        # output, _ = self.net(output)
+        # output = self.fc(output)
+        # final_out = torch.sigmoid( output[0][-1] )
+        return outputs
+        # return output[0][-1]
          
